@@ -38,7 +38,7 @@ connectDB()
     });
 
 // --- 3. Routes (MUST come BEFORE Error Handler) ---
-server.get("/health", (req, res) => {
+server.get("/", (req, res) => {
     res.status(200).json({ message: "System online. Wallet currently crying." });
 });
 
