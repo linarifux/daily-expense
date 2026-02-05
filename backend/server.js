@@ -15,14 +15,17 @@ dotenv.config({ path: "./.env" });
 const server = express();
 
 // --- 1. Global Middleware ---
+
+// TRUST PROXY: Critical for Vercel to correctly identify 'secure' cookies
+server.set("trust proxy", 1);
+
 server.use(cors({
-    // Updated to include your specific Netlify and Vercel domains
+    // Only include the exact origins needed to keep the header size small
     origin: [
         "http://localhost:5173", 
-        "https://track-expense-daily.netlify.app", 
-        "https://daily-expense-tau.vercel.app"
+        "https://track-expense-daily.netlify.app"
     ], 
-    credentials: true,
+    credentials: true, // Required to allow cookies to be sent/received
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
 }));
@@ -32,10 +35,8 @@ server.use(express.json({ limit: "16kb" }));
 server.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 // --- 2. Database Connection ---
-// For Vercel deployment, we connect once but export the app for serverless execution
 connectDB()
     .then(() => {
-        // Only start the local listener if not running on a serverless provider
         if (process.env.NODE_ENV !== 'production') {
             server.listen(process.env.PORT || 8000, () => {
                 console.log(` 🚀 Server is sprinting at port: ${process.env.PORT || 8000}`);
@@ -50,7 +51,7 @@ connectDB()
 server.get("/", (req, res) => {
     res.status(200).json({ 
         message: "System online. Wallet currently crying.",
-        deployment: "Vercel Serverless"
+        deployment: "Vercel Serverless Production"
     });
 });
 
@@ -77,5 +78,4 @@ server.use((err, req, res, next) => {
     });
 });
 
-// CRITICAL FOR VERCEL: Export the server instance
 export default server;
