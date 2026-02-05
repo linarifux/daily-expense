@@ -16,7 +16,7 @@ const server = express();
 
 // --- 1. Global Middleware ---
 server.use(cors({
-    origin: "http://localhost:5173", 
+    origin: ["http://localhost:5173", "https://track-expense-daily.netlify.app", "https://daily-expense-tau.vercel.app"], 
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"]
