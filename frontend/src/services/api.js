@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1",
+    baseURL: import.meta.env.VITE_API_URL,
     withCredentials: true, // Crucial for sending/receiving cookies
     headers: {
         "Content-Type": "application/json",
@@ -20,7 +20,6 @@ api.interceptors.response.use(
     }
 );
 
-console.log(api.getUri());
 
 
 export default api;

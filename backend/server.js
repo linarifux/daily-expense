@@ -16,10 +16,15 @@ const server = express();
 
 // --- 1. Global Middleware ---
 server.use(cors({
-    origin: ["http://localhost:5173", "https://track-expense-daily.netlify.app", "https://daily-expense-tau.vercel.app"], 
+    // Updated to include your specific Netlify and Vercel domains
+    origin: [
+        "http://localhost:5173", 
+        "https://track-expense-daily.netlify.app", 
+        "https://daily-expense-tau.vercel.app"
+    ], 
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
 }));
 
 server.use(cookieParser());
@@ -27,37 +32,41 @@ server.use(express.json({ limit: "16kb" }));
 server.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 // --- 2. Database Connection ---
+// For Vercel deployment, we connect once but export the app for serverless execution
 connectDB()
     .then(() => {
-        server.listen(process.env.PORT || 8000, () => {
-            console.log(` 🚀 Server is sprinting at port: ${process.env.PORT || 8000}`);
-        });
+        // Only start the local listener if not running on a serverless provider
+        if (process.env.NODE_ENV !== 'production') {
+            server.listen(process.env.PORT || 8000, () => {
+                console.log(` 🚀 Server is sprinting at port: ${process.env.PORT || 8000}`);
+            });
+        }
     })
     .catch((err) => {
         console.error("MongoDB connection failed !!! ", err);
     });
 
-// --- 3. Routes (MUST come BEFORE Error Handler) ---
+// --- 3. Routes ---
 server.get("/", (req, res) => {
-    res.status(200).json({ message: "System online. Wallet currently crying." });
+    res.status(200).json({ 
+        message: "System online. Wallet currently crying.",
+        deployment: "Vercel Serverless"
+    });
 });
 
 server.use("/api/v1/transactions", transactionRouter);
 server.use("/api/v1/users", userRouter);
 
-// --- 4. Custom Global Error Handler (MUST come LAST) ---
-// This acts as the final safety net for all routes above it.
+// --- 4. Custom Global Error Handler ---
 server.use((err, req, res, next) => {
-    // If it's a known ApiError, use its status code and message
     if (err instanceof ApiError) {
         return res.status(err.statusCode).json({
             success: false,
-            message: err.message, // This is the "humorous" message you want
+            message: err.message,
             errors: err.errors,
         });
     }
 
-    // Default for unknown errors (like DB crashes or syntax errors)
     const statusCode = err.statusCode || 500;
     const message = err.message || "Internal Server Error: The server is having a mid-life crisis.";
 
@@ -67,3 +76,6 @@ server.use((err, req, res, next) => {
         stack: process.env.NODE_ENV === "development" ? err.stack : null,
     });
 });
+
+// CRITICAL FOR VERCEL: Export the server instance
+export default server;

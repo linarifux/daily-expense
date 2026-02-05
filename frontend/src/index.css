@@ -12,53 +12,82 @@
   --color-glass-highlight: rgba(255, 255, 255, 0.05);
   
   /* Animations */
-  --animate-float: float 3s ease-in-out infinite;
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
 
   @keyframes float {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    50% { transform: translateY(-15px); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
   }
 }
 
 /* Global Styles */
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 min-h-screen selection:bg-blue-500/30 font-sans;
-    /* Subtle radial gradient to make the glass pop */
+    @apply bg-[#020617] text-slate-100 min-h-screen selection:bg-blue-500/30 font-sans antialiased;
+    /* High-end cinematic background */
     background-image: 
-      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+      radial-gradient(circle at 0% 0%, rgba(59, 130, 246, 0.12) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(139, 92, 246, 0.1) 0%, transparent 40%),
+      radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 1) 0%, rgba(2, 6, 23, 1) 100%);
     background-attachment: fixed;
+  }
+
+  /* Custom Scrollbar for the Glass UI */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20 transition-colors border-2 border-transparent bg-clip-padding;
   }
 }
 
-/* Custom Utilities for that Stylish Look */
+/* Custom Utilities */
 @utility glass-effect {
   background-color: var(--color-glass-bg);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--color-glass-border);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
 }
 
 @utility glass-input {
-  @apply bg-slate-900/40 border border-slate-700/50 rounded-xl px-4 py-2.5 
-         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50
-         transition-all duration-200 placeholder:text-slate-500;
+  @apply bg-white/[0.03] border border-white/5 rounded-2xl px-5 py-3.5 
+         focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500/40
+         focus:bg-white/[0.06] transition-all duration-300 placeholder:text-slate-600 text-sm;
 }
 
 @utility text-gradient {
-  @apply bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent;
+  @apply bg-gradient-to-br from-white via-white to-slate-500 bg-clip-text text-transparent font-black tracking-tight;
 }
 
-/* Hide scrollbar for a cleaner UI but allow scrolling */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
+@utility shimmer-effect {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
 }
+
+/* Cleanup & Interaction */
+button {
+  @apply cursor-pointer select-none active:scale-95 transition-transform;
+}
+
 .no-scrollbar {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-button{
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+button {
   cursor: pointer;
 }
