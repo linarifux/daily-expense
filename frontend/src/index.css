@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Colors with a neon/cyber touch */
+  --color-brand-primary: #3b82f6;   /* Electric Blue */
+  --color-brand-success: #10b981;   /* Emerald (Earnings) */
+  --color-brand-danger: #ef4444;    /* Rose (Expenses) */
+  
+  /* Glassmorphism Variables */
+  --color-glass-bg: rgba(15, 23, 42, 0.65);
+  --color-glass-border: rgba(255, 255, 255, 0.1);
+  --color-glass-highlight: rgba(255, 255, 255, 0.05);
+  
+  /* Animations */
+  --animate-float: float 3s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+/* Global Styles */
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 min-h-screen selection:bg-blue-500/30 font-sans;
+    /* Subtle radial gradient to make the glass pop */
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.15) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(16, 185, 129, 0.1) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+}
+
+/* Custom Utilities for that Stylish Look */
+@utility glass-effect {
+  background-color: var(--color-glass-bg);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+}
+
+@utility glass-input {
+  @apply bg-slate-900/40 border border-slate-700/50 rounded-xl px-4 py-2.5 
+         focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50
+         transition-all duration-200 placeholder:text-slate-500;
+}
+
+@utility text-gradient {
+  @apply bg-gradient-to-br from-white to-slate-400 bg-clip-text text-transparent;
+}
+
+/* Hide scrollbar for a cleaner UI but allow scrolling */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+button{
+  cursor: pointer;
+}
