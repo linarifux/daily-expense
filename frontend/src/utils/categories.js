@@ -8,5 +8,6 @@ export const CATEGORIES = [
   { id: "shopping", label: "Shopping", icon: "🛍️" },
   { id: "entertainment", label: "Entertainment", icon: "🎬" },
   { id: "electrics", label: "Electrics", icon: "⚡" },
+  {id: "groceries", label: "Groceries", icon: "🛒" },
   { id: "other", label: "Miscellaneous", icon: "🤷" },
 ];
