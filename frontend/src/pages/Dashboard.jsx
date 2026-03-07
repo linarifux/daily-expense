@@ -7,10 +7,10 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Wallet, TrendingUp, TrendingDown, Plus, LogOut, Trash2, 
-  Loader2, Search, Filter, X, Calculator, PieChart as PieIcon,
+  Loader2, Search, Filter, X, PieChart as PieIcon,
   CalendarDays, ArrowUpRight, ArrowDownLeft, AlertCircle
 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Sector } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
 import AddTransactionModal from "../components/AddTransactionModal";
 import Toast from "../components/Toast";
 import { CATEGORIES } from "../utils/categories";
@@ -19,11 +19,16 @@ const Dashboard = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { items, stats, loading } = useSelector((state) => state.transactions);
-  const { user } = useSelector((state) => state.auth);
   
-  const [activeTab, setActiveTab] = useState("Daily");
+  // Temporal State
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+  
+  // UI & Filter State
+  const [activeTab, setActiveTab] = useState("Monthly"); 
   const [searchQuery, setSearchQuery] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
   const [showToast, setShowToast] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -31,10 +36,12 @@ const Dashboard = () => {
   const [endDate, setEndDate] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [activeIndex, setActiveIndex] = useState(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
-  useEffect(() => {
-    dispatch(fetchTransactions());
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const years = [new Date().getFullYear() - 1, new Date().getFullYear(), new Date().getFullYear() + 1];
+
+  useEffect(() => { 
+    dispatch(fetchTransactions()); 
   }, [dispatch]);
 
   const handleLogout = async () => {
@@ -42,8 +49,8 @@ const Dashboard = () => {
       await api.post("/users/logout");
       dispatch(logoutLocal());
       navigate("/login");
-    } catch (error) {
-      console.error("Logout failed:", error);
+    } catch (error) { 
+      console.error("Logout failed:", error); 
     }
   };
 
@@ -82,29 +89,32 @@ const Dashboard = () => {
   const { filteredItems, filteredTotals, chartData } = useMemo(() => {
     const now = new Date();
     const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-    
+
     const filtered = items.filter(item => {
       const itemDate = new Date(item.date);
       const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory = selectedCategory === "All" || item.category === selectedCategory;
-      
-      const start = startDate ? new Date(startDate).setHours(0,0,0,0) : null;
-      const end = endDate ? new Date(endDate).setHours(23,59,59,999) : null;
-      const matchesDateRange = (!start || itemDate >= start) && (!end || itemDate <= end);
+      const matchesDateRange = (!startDate || itemDate >= new Date(startDate).setHours(0,0,0,0)) && 
+                               (!endDate || itemDate <= new Date(endDate).setHours(23,59,59,999));
 
       if (!matchesSearch || !matchesCategory || !matchesDateRange) return false;
-      if (startDate || endDate) return true;
+      if (startDate || endDate) return true; // Explicit date filters override tabs
 
-      if (activeTab === "Daily") return itemDate >= startOfDay;
+      // Temporal Filter Logic
+      if (activeTab === "Monthly") {
+        return itemDate.getMonth() === selectedMonth && itemDate.getFullYear() === selectedYear;
+      }
+      if (activeTab === "Yearly") {
+        return itemDate.getFullYear() === selectedYear;
+      }
+      if (activeTab === "Daily") {
+        return itemDate >= startOfDay;
+      }
       if (activeTab === "Weekly") {
-        const west = new Date(now.setDate(now.getDate() - now.getDay()));
+        const west = new Date(new Date().setDate(new Date().getDate() - new Date().getDay()));
         return itemDate >= west;
       }
-      if (activeTab === "Monthly") {
-        return itemDate.getMonth() === new Date().getMonth() && 
-               itemDate.getFullYear() === new Date().getFullYear();
-      }
-      return itemDate.getFullYear() === new Date().getFullYear();
+      return true;
     });
 
     const categorySums = {};
@@ -126,11 +136,11 @@ const Dashboard = () => {
     }));
 
     return { filteredItems: filtered, filteredTotals: totals, chartData: formattedChart };
-  }, [items, activeTab, searchQuery, selectedCategory, startDate, endDate]);
+  }, [items, activeTab, searchQuery, selectedCategory, startDate, endDate, selectedMonth, selectedYear]);
 
   const formatBDT = (amount) => {
-    return new Intl.NumberFormat('en-BD', {
-      style: 'currency', currency: 'BDT', minimumFractionDigits: 0
+    return new Intl.NumberFormat('en-BD', { 
+      style: 'currency', currency: 'BDT', minimumFractionDigits: 0 
     }).format(amount || 0).replace("BDT", "৳");
   };
 
@@ -145,14 +155,14 @@ const Dashboard = () => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
     return (
       <g>
-        <Sector
-          cx={cx} cy={cy}
-          innerRadius={innerRadius - 4}
-          outerRadius={outerRadius + 8}
-          startAngle={startAngle}
-          endAngle={endAngle}
-          fill={fill}
-          style={{ filter: `drop-shadow(0 0 12px ${fill}44)` }}
+        <Sector 
+          cx={cx} cy={cy} 
+          innerRadius={innerRadius - 4} 
+          outerRadius={outerRadius + 8} 
+          startAngle={startAngle} 
+          endAngle={endAngle} 
+          fill={fill} 
+          style={{ filter: `drop-shadow(0 0 12px ${fill}44)` }} 
         />
         <text x={cx} y={cy - 12} textAnchor="middle" fill="#cbd5e1" fontSize="12px" fontWeight="900" style={{ textTransform: 'uppercase', letterSpacing: '2px' }}>
           {payload.name}
@@ -169,8 +179,8 @@ const Dashboard = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-6 md:space-y-10 pb-24 min-h-screen font-sans bg-[#020617] selection:bg-blue-500/30">
-      <Toast show={showToast} message="Ledger updated successfully ৳" onClose={() => setShowToast(false)} />
-
+      <Toast show={showToast} message="Ledger updated successfully" onClose={() => setShowToast(false)} />
+      
       {/* --- CONFIRM DELETE MODAL --- */}
       <AnimatePresence>
         {confirmDeleteId && (
@@ -195,7 +205,7 @@ const Dashboard = () => {
       </AnimatePresence>
 
       {/* --- HEADER --- */}
-      <header className="flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-6 border-b border-white/5 pb-8 md:pb-10">
+      <header className="flex flex-col md:flex-row justify-between items-center text-center md:text-left gap-6 border-b border-white/5 pb-8">
         <div className="flex flex-col items-center md:items-start">
           <div className="flex items-center gap-3 mb-2">
             <div className="h-3 w-3 md:h-4 md:w-4 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_20px_rgba(16,185,129,0.6)]" />
@@ -207,7 +217,6 @@ const Dashboard = () => {
             v3.0 <span className="h-1.5 w-1.5 md:h-2 md:w-2 bg-slate-800 rounded-full"/> Dhaka Terminal
           </p>
         </div>
-        
         <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto">
           <button onClick={handleLogout} className="flex-1 md:flex-none glass-effect px-4 md:px-8 py-3 md:py-4 rounded-xl md:rounded-2xl text-slate-200 hover:text-rose-400 border border-white/10 flex items-center justify-center gap-2 md:gap-3 font-black text-[10px] md:text-xs uppercase tracking-widest active:scale-95 transition-all">
             <LogOut size={16} /> Logout
@@ -225,8 +234,39 @@ const Dashboard = () => {
         <StatBox title="Expenses" amount={stats.expense} icon={ArrowDownLeft} color="text-rose-400" bgColor="bg-rose-400/10" />
       </div>
 
+      {/* --- TEMPORAL BAR --- */}
+      <div className="glass-effect p-6 rounded-[2rem] border border-white/5 space-y-6">
+        <div className="flex items-center justify-between">
+            <h3 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Temporal Range</h3>
+            <div className="flex bg-black/40 rounded-lg p-1 border border-white/5">
+                {years.map(y => (
+                    <button 
+                      key={y} 
+                      onClick={() => setSelectedYear(y)} 
+                      className={`px-4 py-1 rounded-md text-[10px] font-black uppercase transition-all ${selectedYear === y ? "bg-white/10 text-white" : "text-slate-600 hover:text-slate-400"}`}
+                    >
+                        {y}
+                    </button>
+                ))}
+            </div>
+        </div>
+        <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+            {months.map((m, i) => (
+              <button 
+                key={m} 
+                onClick={() => { setSelectedMonth(i); setActiveTab("Monthly"); }} 
+                className={`flex-shrink-0 px-6 py-3 rounded-xl border font-black text-[10px] uppercase tracking-widest transition-all ${selectedMonth === i ? "bg-blue-600 border-blue-400 text-white shadow-lg shadow-blue-900/20" : "bg-white/[0.03] border-white/5 text-slate-500 hover:text-white hover:bg-white/[0.08]"}`}
+              >
+                  {m}
+              </button>
+            ))}
+        </div>
+      </div>
+
+      {/* --- DASHBOARD CONTENT (Analysis + List) --- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-10 items-start">
-        {/* --- VISUALIZATION --- */}
+        
+        {/* --- VISUALIZATION (ASIDE) --- */}
         <aside className="lg:col-span-5 order-2 lg:order-1 space-y-6 md:space-y-8">
           <div className="glass-effect rounded-[2.5rem] md:rounded-[3.5rem] p-6 md:p-12 border border-white/10 relative shadow-2xl bg-white/[0.01]">
             <div className="flex items-center justify-between mb-8 md:mb-10 relative z-10">
@@ -243,9 +283,21 @@ const Dashboard = () => {
               {chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie activeIndex={activeIndex} activeShape={renderActiveShape} data={chartData} innerRadius="65%" outerRadius="85%" paddingAngle={6} dataKey="value" stroke="none" onMouseEnter={(_, index) => setActiveIndex(index)} onMouseLeave={() => setActiveIndex(null)} animationDuration={1000}>
+                    <Pie 
+                      activeIndex={activeIndex} 
+                      activeShape={renderActiveShape} 
+                      data={chartData} 
+                      innerRadius="65%" 
+                      outerRadius="85%" 
+                      paddingAngle={6} 
+                      dataKey="value" 
+                      stroke="none" 
+                      onMouseEnter={(_, index) => setActiveIndex(index)} 
+                      onMouseLeave={() => setActiveIndex(null)} 
+                      animationDuration={1000}
+                    >
                       {chartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={activeIndex === null || activeIndex === index ? 1 : 0.3} style={{ outline: 'none' }} />
+                        <Cell key={`cell-${index}`} fill={entry.color} fillOpacity={activeIndex === null || activeIndex === index ? 1 : 0.3} style={{ outline: 'none', cursor: 'pointer' }} />
                       ))}
                     </Pie>
                   </PieChart>
@@ -266,7 +318,12 @@ const Dashboard = () => {
 
             <div className="grid grid-cols-2 gap-3 md:gap-4 mt-8 md:mt-10">
                {chartData.map((item, i) => (
-                 <div key={i} className={`flex flex-col gap-1 md:gap-2 p-3 md:p-4 rounded-xl md:rounded-2xl border border-white/5 transition-all ${activeIndex === i ? 'bg-white/[0.08] border-white/20' : 'bg-white/[0.03]'}`}>
+                 <div 
+                   key={i} 
+                   onMouseEnter={() => setActiveIndex(i)}
+                   onMouseLeave={() => setActiveIndex(null)}
+                   className={`flex flex-col gap-1 md:gap-2 p-3 md:p-4 rounded-xl md:rounded-2xl border transition-all cursor-pointer ${activeIndex === i ? 'bg-white/[0.08] border-white/20' : 'bg-white/[0.03] border-white/5 hover:bg-white/[0.05]'}`}
+                 >
                     <div className="flex items-center gap-2">
                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
                        <span className="text-[9px] md:text-[11px] font-black text-slate-200 uppercase truncate">{item.name}</span>
@@ -281,17 +338,30 @@ const Dashboard = () => {
           </div>
         </aside>
 
-        {/* --- NAVIGATION & HISTORY --- */}
+        {/* --- NAVIGATION & HISTORY (MAIN) --- */}
         <main className="lg:col-span-7 order-1 lg:order-2 space-y-6 md:space-y-8">
           <div className="space-y-4 md:space-y-5">
             <div className="flex flex-wrap gap-2 bg-black/60 p-1.5 rounded-2xl md:rounded-[2.5rem] border border-white/10 backdrop-blur-3xl shadow-inner">
                 {["Daily", "Weekly", "Monthly", "Yearly"].map((tab) => (
-                    <button key={tab} onClick={() => { setActiveTab(tab); setStartDate(""); setEndDate(""); }} className={`flex-1 min-w-[70px] py-3 md:py-4.5 rounded-xl md:rounded-[1.75rem] text-[9px] md:text-[11px] font-black uppercase tracking-[0.15em] md:tracking-[0.25em] transition-all ${activeTab === tab && !startDate && !endDate ? "bg-white/10 text-white shadow-xl border border-white/10" : "text-slate-500 hover:text-slate-200"}`}>
+                    <button 
+                      key={tab} 
+                      onClick={() => { 
+                        setActiveTab(tab); 
+                        setStartDate(""); 
+                        setEndDate(""); 
+                        // If selecting Daily/Weekly/Yearly, auto-sync the temporal bar to current for logical consistency
+                        if(tab !== "Monthly") {
+                          setSelectedMonth(new Date().getMonth());
+                          setSelectedYear(new Date().getFullYear());
+                        }
+                      }} 
+                      className={`flex-1 min-w-[70px] py-3 md:py-4.5 rounded-xl md:rounded-[1.75rem] text-[9px] md:text-[11px] font-black uppercase tracking-[0.15em] md:tracking-[0.25em] transition-all ${activeTab === tab && !startDate && !endDate ? "bg-white/10 text-white shadow-xl border border-white/10" : "text-slate-500 hover:text-slate-200"}`}
+                    >
                         {tab}
                     </button>
                 ))}
             </div>
-            <button onClick={() => setShowFilters(true)} className="w-full flex items-center justify-center gap-3 py-4 md:py-6 rounded-2xl md:rounded-[2.5rem] border glass-effect border-white/10 text-slate-200 font-black text-[10px] md:text-xs uppercase tracking-[0.3em] md:tracking-[0.4em] active:scale-95 shadow-2xl">
+            <button onClick={() => setShowFilters(true)} className="w-full flex items-center justify-center gap-3 py-4 md:py-6 rounded-2xl md:rounded-[2.5rem] border glass-effect border-white/10 text-slate-200 font-black text-[10px] md:text-xs uppercase tracking-[0.3em] md:tracking-[0.4em] active:scale-95 shadow-2xl hover:bg-white/5 transition-all">
                 <Filter size={16} className="text-blue-500" /> Filter Terminal
             </button>
           </div>
@@ -308,7 +378,7 @@ const Dashboard = () => {
                     <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">{filteredItems.length} Syncs</span>
                   </div>
                 </div>
-                {showFilters && (
+                {(startDate || endDate || selectedCategory !== "All") && (
                   <div className="flex gap-6 md:gap-8 border-l border-white/10 pl-6 md:pl-10 items-center">
                      <div className="text-right">
                         <p className="text-[8px] md:text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">In</p>
@@ -324,13 +394,19 @@ const Dashboard = () => {
 
               <div className="relative group">
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-all duration-500" size={18} />
-                <input type="text" placeholder="Scan sin description..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-xl md:rounded-[2rem] py-4 md:py-6 pl-14 md:pl-16 pr-6 text-sm md:text-base text-slate-100 outline-none focus:bg-black/80 transition-all placeholder:text-slate-700 font-bold" />
+                <input 
+                  type="text" 
+                  placeholder="Scan sin description..." 
+                  value={searchQuery} 
+                  onChange={(e) => setSearchQuery(e.target.value)} 
+                  className="w-full bg-black/50 border border-white/10 rounded-xl md:rounded-[2rem] py-4 md:py-6 pl-14 md:pl-16 pr-6 text-sm md:text-base text-slate-100 outline-none focus:bg-black/80 transition-all placeholder:text-slate-700 font-bold" 
+                />
               </div>
             </div>
 
             <div className="flex-1 overflow-y-auto custom-scrollbar px-4 md:px-6 pb-12 space-y-3">
               <AnimatePresence mode="popLayout">
-                {filteredItems.map((item) => {
+                {filteredItems.length > 0 ? filteredItems.map((item) => {
                   const category = CATEGORIES.find(c => c.id === item.category);
                   return (
                     <motion.div key={item._id} layout initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.95 }} className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-6 rounded-2xl md:rounded-[2.25rem] border-l-[6px] md:border-l-[8px] gap-4 transition-all group shadow-xl ${getRowStyle(item.category)}`}>
@@ -355,7 +431,12 @@ const Dashboard = () => {
                       </div>
                     </motion.div>
                   );
-                })}
+                }) : (
+                  <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+                     <PieIcon size={48} className="opacity-20 mb-4" />
+                     <p className="text-xs font-black uppercase tracking-widest">No Records Found</p>
+                  </div>
+                )}
               </AnimatePresence>
             </div>
           </section>
@@ -367,33 +448,34 @@ const Dashboard = () => {
           {showFilters && (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[200] flex items-center justify-center p-4 backdrop-blur-[20px] bg-black/80">
                   <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="glass-effect p-8 md:p-16 rounded-[3rem] md:rounded-[4.5rem] border border-blue-500/20 max-w-2xl w-full space-y-8 md:space-y-12 shadow-2xl relative">
-                      <button onClick={() => setShowFilters(false)} className="absolute top-8 right-8 p-3 rounded-full hover:bg-white/10 text-slate-400"><X size={24}/></button>
+                      <button onClick={() => setShowFilters(false)} className="absolute top-8 right-8 p-3 rounded-full hover:bg-white/10 text-slate-400 transition-all"><X size={24}/></button>
                       <h2 className="text-2xl md:text-3xl font-black text-white uppercase tracking-tighter flex items-center gap-3">
                          <Filter className="text-blue-500" size={24} /> Settings
                       </h2>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 md:gap-10">
                           <FilterField label="Sector">
-                              <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-2xl p-5 text-sm text-slate-100 outline-none">
+                              <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-2xl p-5 text-sm text-slate-100 outline-none cursor-pointer">
                                   <option value="All">All Sectors</option>
                                   {CATEGORIES.map(cat => <option key={cat.id} value={cat.id}>{cat.label}</option>)}
                               </select>
                           </FilterField>
                           <div className="flex items-end">
-                              <button onClick={clearFilters} className="w-full py-5 bg-rose-500/10 text-rose-500 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all">Clear Filters</button>
+                              <button onClick={clearFilters} className="w-full py-5 bg-rose-500/10 text-rose-500 rounded-2xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all hover:bg-rose-500/20">Clear Filters</button>
                           </div>
                           <FilterField label="Start Date">
-                              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-2xl p-5 text-sm text-slate-100 [color-scheme:dark]" />
+                              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-2xl p-5 text-sm text-slate-100 [color-scheme:dark] outline-none" />
                           </FilterField>
                           <FilterField label="End Date">
-                              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-2xl p-5 text-sm text-slate-100 [color-scheme:dark]" />
+                              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full bg-black/50 border border-white/10 rounded-2xl p-5 text-sm text-slate-100 [color-scheme:dark] outline-none" />
                           </FilterField>
                       </div>
-                      <button onClick={() => setShowFilters(false)} className="w-full py-6 bg-blue-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.4em] active:scale-[0.98] shadow-lg">Synchronize</button>
+                      <button onClick={() => setShowFilters(false)} className="w-full py-6 bg-blue-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.4em] active:scale-[0.98] shadow-lg hover:bg-blue-500 transition-all">Synchronize</button>
                   </motion.div>
               </motion.div>
           )}
       </AnimatePresence>
 
+      {/* --- ADD RECORD MODAL --- */}
       <AddTransactionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSuccess={() => setShowToast(true)} />
     </div>
   );
