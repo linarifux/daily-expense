@@ -9,5 +9,6 @@ export const CATEGORIES = [
   { id: "entertainment", label: "Entertainment", icon: "🎬" },
   { id: "electrics", label: "Electrics", icon: "⚡" },
   {id: "groceries", label: "Groceries", icon: "🛒" },
+  { id: "construction", label: "House Construction", icon: "🏗️" },
   { id: "other", label: "Miscellaneous", icon: "🤷" },
 ];
